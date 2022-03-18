@@ -4,3 +4,6 @@
 .RData
 .httr-oauth
 .DS_Store
+
+*.so
+*.o
