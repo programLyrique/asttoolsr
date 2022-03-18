@@ -19,10 +19,12 @@
 #ifndef ASTTOOLS_AST_H
 #define ASTTOOL_AST_H
 
-
+#define R_NO_REMAP
 #include <R.h>
 #include <R_ext/Rdynload.h>
 #include <Rinternals.h>
+
+
 
 #ifdef __cplusplus
 extern "C" {

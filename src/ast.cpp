@@ -18,7 +18,62 @@
 
 #include "ast.h"
 
+#include <iostream>
+#include <fstream>
+#include <string>
+
+
+
+// Inspired by https://stackoverflow.com/questions/2417588/escaping-a-c-string
+std::string const write_escaped(std::string const& s) {
+  std::string out;
+  out.reserve(s.size());
+  for (std::string::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
+    unsigned char c = *i;
+    if (' ' <= c and c <= '~' and c != '\\' and c != '"') {
+      out += c;
+    }
+    else {
+      out += '\\';
+      switch(c) {
+      case '"':  out += '"';  break;
+      case '\\': out += '\\'; break;
+      case '\t': out += 't';  break;
+      case '\r': out += 'r';  break;
+      case '\n': out += 'n';  break;
+      default:
+        char const* const hexdig = "0123456789ABCDEF";
+      out += 'x';
+      out += hexdig[c >> 4];
+      out += hexdig[c & 0xF];
+      }
+    }
+  }
+  return out;
+}
+
+
+void traverse_ast(std::ostream& stream, const std::string& parent_name, SEXP ast) {
+  switch(TYPEOF(ast)) {
+  case EXPRSXP: {
+
+    }
+    break;
+
+  case LANGSXP: {
+    }
+    break;
+  case SYMSXP: {
+
+    }
+    break;
+  }
+}
 
 SEXP generate_dot_ast(SEXP ast, SEXP filename) {
+  // Traverse the AST
 
+  // Generate proper edges and proper nodes
+
+  return R_NilValue;
 }
