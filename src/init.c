@@ -35,7 +35,8 @@ static const R_CallMethodDef callMethods[] = {
   {NULL,						NULL,								0}
 };
 
-void R_init_sxpdb(DllInfo* dll) {
+// R_init_NAMEOFPACKAGE
+void R_init_asttoolsr(DllInfo* dll) {
   R_registerRoutines(dll, NULL, callMethods, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
   //R_RegisterCCallable("sxpdb", "add_val", (DL_FUNC) &add_val);

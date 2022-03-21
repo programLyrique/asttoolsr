@@ -12,14 +12,12 @@ build: document
 	R CMD build .
 
 check: build
-	R CMD check record*tar.gz
+	R CMD check asttoolsr*tar.gz
 
 clean:
-	-rm -f sxpdb*tar.gz
-	-rm -fr sxpdb.Rcheck
+	-rm -f asttoolsr*tar.gz
+	-rm -fr asttoolsr.Rcheck
 	-rm -rf src/*.o src/*.so
-	-rm -rf tests/testthat/test_db*
-	-rm -f trace
 
 document:
 	R -e 'devtools::document()'
@@ -28,7 +26,6 @@ test:
 	R -e 'devtools::test()'
 
 clean_test:
-	-rm -rf tests/testthat/test_db*
 	-rm -rf tests/testthat/_snaps
 
 trace:
@@ -40,5 +37,3 @@ lintr:
 install: clean
 	$(BEAR) R CMD INSTALL .
 
-write:
-	cat trace | grep -w "write"

@@ -191,7 +191,9 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
 SEXP generate_dot_ast(SEXP ast) {
   std::ostringstream out;
   uint64_t id = 0;
+  out << "digraph ast {" << std::endl;
   traverse_ast(out, "", id, ast);
+  out << "}" << std::endl;
 
   return Rf_mkString(out.str().c_str());
 }
