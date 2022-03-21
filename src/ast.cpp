@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 
@@ -96,6 +97,18 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
       }
     }
     break;
+  case LISTSXP: {
+   stream << "parameters\"];" << std::endl;
+    // the actual parameters
+    size_t i = 0;
+    for(SEXP cons = CDR(ast) ; cons != R_NilValue; cons = CDR(cons), i++) {
+      id++;
+      std::string arg = std::string("param_") + std::to_string(i);
+      write_edge(stream, my_id, id);
+      traverse_ast(stream, arg, id, CAR(cons) );
+    }
+  }
+    break;
   case SYMSXP: {
       // symbols are red
       stream << CHAR(PRINTNAME(ast)) << "\", color = red];" << std::endl;
@@ -106,6 +119,20 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
       stream << "NULL\", color = blue];" << std::endl;
     }
     break;
+  case LGLSXP: {
+      auto lgl = Rf_asLogical(ast);
+      if(lgl == NA_LOGICAL) {
+        stream << "NA";
+      }
+      else if(lgl == 0) {
+        stream << "FALSE";
+      }
+      else {
+        stream << "TRUE";
+      }
+      stream << " : logical\", color = blue];" << std::endl;
+    }
+    break;
   case INTSXP: {
     stream << Rf_asInteger(ast) << " : int\", color = blue];" << std::endl;
     }
@@ -114,14 +141,57 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
     stream << Rf_asReal(ast) << " : real\", color = blue];" << std::endl;
     }
     break;
-    // TODO: other sexps
+  case CPLXSXP: {
+    auto cplx = Rf_asComplex(ast);
+    stream << cplx.r << " + " << cplx.i << " i : complex\", color = blue];" << std::endl;
+    }
+    break;
+  case DOTSXP: {
+      stream << "...\", color = darkred];" << std::endl;
+    }
+    break;
+  case BCODESXP: {
+    stream << "bytecode\", color = darkred];" << std::endl;
+    }
+    break;
+  case RAWSXP: {
+      stream << (Rf_xlength(ast) > 0 ? write_escaped(std::to_string(*RAW(ast))) : "empty") << " : raw\", color = blue];" << std::endl;
+    }
+    break;
+  case STRSXP: {
+      std::string str = write_escaped(CHAR(STRING_ELT(ast, 0)));
+      // only keep the first 30 characters
+      if(str.size() > 33) {
+        str.resize(30, ' ');
+        str += "...";
+      }
+
+      stream << str << " : str\", color = blue];" << std::endl;
+    }
+    break;
+    // the following ones should never happend in an AST
+  case EXTPTRSXP: {
+    stream << "extptr\", color = darkred];" << std::endl;
+    }
+    break;
+  case WEAKREFSXP: {
+    stream << "wearkref\", color = darkred];" << std::endl;
+    }
+    break;
+  case ENVSXP: {
+    stream << "environment\", color = darkred];" << std::endl;
+    }
+    break;
+  default: {
+    Rf_error("Unexpected SEXP %s\n", Rf_type2char(TYPEOF(ast)));
+    }
   }
 }
 
-SEXP generate_dot_ast(SEXP ast, SEXP filename) {
-  // Traverse the AST
+SEXP generate_dot_ast(SEXP ast) {
+  std::ostringstream out;
+  uint64_t id = 0;
+  traverse_ast(out, "", id, ast);
 
-  // Generate proper edges and proper nodes
-
-  return R_NilValue;
+  return Rf_mkString(out.str().c_str());
 }

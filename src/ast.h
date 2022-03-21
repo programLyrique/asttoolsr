@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-SEXP generate_dot_ast(SEXP fun, SEXP filename);
+SEXP generate_dot_ast(SEXP fun);
 
 #ifdef __cplusplus
 } // extern "C"

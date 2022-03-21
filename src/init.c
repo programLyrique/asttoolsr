@@ -28,7 +28,7 @@
 static const R_CallMethodDef callMethods[] = {
   /* name						casted ptr to function			# of args */
   // Generic record related
-  {"generate_dot_ast",					(DL_FUNC) &generate_dot_ast,					2},
+  {"generate_dot_ast",					(DL_FUNC) &generate_dot_ast,					1},
 
 
   // Must have at the end
