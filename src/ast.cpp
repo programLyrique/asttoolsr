@@ -79,19 +79,121 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
   case LANGSXP: {
       // TODO: Special treatment for control instructions (if, while, repeat and so on)
       if(role != "") {
-        stream << role << ": ";
+        stream << role << ":: ";
       }
-      stream  << "call\"];" << std::endl;
-      // call name
-      id++;
-      write_edge(stream, my_id, id);
-      traverse_ast(stream, "call name", id, CAR(ast));
+
+      std::string call_name="";
+      if(Rf_isSymbol(CAR(ast))) {
+        call_name = CHAR(PRINTNAME(CAR(ast)));
+        Rprintf("Call: [%s]\n", call_name.c_str());
+      }
+
+      if(call_name == "<-" || call_name == "=") {
+        //assignment
+        stream << "assign\", color = azure3];" << std::endl;
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "variable", id, CAR(CDR(ast)));
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "", id, CAR(CDDR(ast)));
+        break;
+      }
+      else if(call_name == "if") {
+          stream << "if\", color = darkgreen];" << std::endl;
+          id++;
+          write_edge(stream, my_id, id);
+          traverse_ast(stream, "true branch", id, CAR(CDR(ast)));
+          if(CDDR(ast) != R_NilValue) {
+            id++;
+            write_edge(stream, my_id, id);
+            traverse_ast(stream, "false branch", id, CAR(CDDR(ast)));
+          }
+        break;
+      }
+      else if(call_name == "for") {
+        // for(1 in 1:10) print(i)
+        // We get 4 tokens: for, i, 1:10, and print(i)
+        stream << "for\", color = darkgreen];" << std::endl;
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "iteration variable", id, CAR(CDR(ast)));
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "range", id, CAR(CDDR(ast)));
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "body", id, CAR(CDDDR(ast)));
+        break;
+      }
+      else if (call_name == "while") {
+        stream << "while\", color = darkgreen];" << std::endl;
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "condition", id, CAR(CDR(ast)));
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "body", id, CAR(CDDR(ast)));
+
+        break;
+      }
+      else if (call_name == "repeat") {
+        stream << "repeat\", color = darkgreen];" << std::endl;
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "body", id, CAR(CDR(ast)));
+        break;
+      }
+      else if(call_name == "break") {
+        stream << "break\", color = darkgreen];" << std::endl;
+        break;
+      }
+      else if(call_name == "continue") {
+        stream << "continue\", color = darkgreen];" << std::endl;
+        break;
+      }
+      else if(call_name == "function") {
+        stream << "function\"];" << std::endl;
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "arguments", id, CAR(CDR(ast)));
+
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "body", id, CAR(CDDR(ast)));
+        break;
+      }
+
+      std::string prefix = "argument ";
+      if(call_name == ".Call") {
+        stream << "native call\", color = goldenrod2];" << std::endl;
+      }
+      else if(call_name != "{") {
+        stream  << "call\", color = goldenrod2];" << std::endl;
+        // call name
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "call name", id, CAR(ast));
+      }
+      else {
+        stream << "\"];" << std::endl;
+        prefix  = "statement ";
+      }
 
       // arguments
       size_t i = 0;
       for(SEXP cons = CDR(ast) ; cons != R_NilValue; cons = CDR(cons), i++) {
         id++;
-        std::string arg = std::string("arg_") + std::to_string(i);
+        std::string arg = prefix + std::to_string(i);
         write_edge(stream, my_id, id);
         traverse_ast(stream, arg, id, CAR(cons) );
       }
@@ -101,15 +203,18 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
    stream << "parameters\"];" << std::endl;
     // the actual parameters
     size_t i = 0;
-    for(SEXP cons = CDR(ast) ; cons != R_NilValue; cons = CDR(cons), i++) {
+    for(SEXP cons = ast ; cons != R_NilValue; cons = CDR(cons), i++) {
       id++;
       std::string arg = std::string("param_") + std::to_string(i);
       write_edge(stream, my_id, id);
-      traverse_ast(stream, arg, id, CAR(cons) );
+      traverse_ast(stream, arg, id, TAG(cons) );
     }
   }
     break;
   case SYMSXP: {
+      if(role != "") {
+        stream << role << ":: ";
+      }
       // symbols are red
       stream << CHAR(PRINTNAME(ast)) << "\", color = red];" << std::endl;
     }
