@@ -57,15 +57,41 @@ inline void write_edge(std::ostream& stream,  uint64_t from_id, uint64_t to_id) 
   stream << " v_" << from_id << " -> v_" << to_id << ";" << std::endl;
 }
 
+inline void start_attributes(std::ostream& stream) {
+  stream << " [";
+}
+
+inline void end_attributes(std::ostream& stream) {
+  stream << " ];" << std::endl;
+}
+
+inline void set_label(std::ostream& stream, const std::string& sem1, const std::string& sem2, const std::string& type, const std::string& source) {
+  std::string semantics=sem1;
+  if(sem1 != "" && sem2 != "") {
+    semantics += "; ";
+    semantics += sem2;
+  }
+  else {
+    semantics = sem2;
+  }
+  stream << "label\"[" <<  semantics << "](" << type<< "){" << source << "}\" ";
+}
+
+inline void set_color(std::ostream& stream, const std::string& color) {
+  stream << "color = " << color;
+}
 
 void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, SEXP ast) {
   uint64_t my_id = id;
   //start writing the node
-  stream << " v_" << my_id << " [label=\"";
+  stream << " v_" << my_id;
+
+  start_attributes(stream);
 
   switch(TYPEOF(ast)) {
   case EXPRSXP: {
-      stream << "expression\"];" << std::endl;
+      set_label(stream, "", "", "", "expression");
+      end_attributes(stream);
 
       size_t nb_exprs = Rf_xlength(ast);
       for(size_t i = 0 ; i < nb_exprs ; i++) {
@@ -77,20 +103,16 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
     break;
 
   case LANGSXP: {
-      // TODO: Special treatment for control instructions (if, while, repeat and so on)
-      if(role != "") {
-        stream << role << ":: ";
-      }
-
       std::string call_name="";
       if(Rf_isSymbol(CAR(ast))) {
         call_name = CHAR(PRINTNAME(CAR(ast)));
-        //Rprintf("Call: [%s]\n", call_name.c_str());
       }
 
       if(call_name == "<-" || call_name == "=") {
         //assignment
-        stream << "assign\", color = azure3];" << std::endl;
+        set_label(stream, role, "assign", "", call_name);
+        set_color(stream, "azure3");
+        end_attributes(stream);
 
         id++;
         write_edge(stream, my_id, id);
@@ -102,14 +124,18 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
         break;
       }
       else if(call_name == "if") {
-          stream << "if\", color = darkgreen];" << std::endl;
+          set_label(stream, role, "control flow", "", "if");
+          set_color(stream, "darkgreen");
+          end_attributes(stream);
+
           id++;
           write_edge(stream, my_id, id);
           traverse_ast(stream, "condition", id, CAR(CDR(ast)));
+
           id++;
           write_edge(stream, my_id, id);
           traverse_ast(stream, "true branch", id, CAR(CDDR(ast)));
-          if(CDDR(ast) != R_NilValue) {
+          if(CDDDR(ast) != R_NilValue) {
             id++;
             write_edge(stream, my_id, id);
             traverse_ast(stream, "false branch", id, CAR(CDDDR(ast)));
@@ -119,7 +145,9 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
       else if(call_name == "for") {
         // for(1 in 1:10) print(i)
         // We get 4 tokens: for, i, 1:10, and print(i)
-        stream << "for\", color = darkgreen];" << std::endl;
+        set_label(stream, role, "control flow", "", "for");
+        set_color(stream, "darkgreen");
+        end_attributes(stream);
 
         id++;
         write_edge(stream, my_id, id);
@@ -135,7 +163,9 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
         break;
       }
       else if (call_name == "while") {
-        stream << "while\", color = darkgreen];" << std::endl;
+        set_label(stream, role, "control flow", "", "while");
+        set_color(stream, "darkgreen");
+        end_attributes(stream);
 
         id++;
         write_edge(stream, my_id, id);
@@ -148,7 +178,9 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
         break;
       }
       else if (call_name == "repeat") {
-        stream << "repeat\", color = darkgreen];" << std::endl;
+        set_label(stream, role, "control flow", "", "repeat");
+        set_color(stream, "darkgreen");
+        end_attributes(stream);
 
         id++;
         write_edge(stream, my_id, id);
@@ -156,19 +188,24 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
         break;
       }
       else if(call_name == "break") {
-        stream << "break\", color = darkgreen];" << std::endl;
+        set_label(stream, role, "control flow", "", "break");
+        set_color(stream, "darkgreen");
+        end_attributes(stream);
         break;
       }
       else if(call_name == "continue") {
-        stream << "continue\", color = darkgreen];" << std::endl;
+        set_label(stream, role, "control flow", "", "continue");
+        set_color(stream, "darkgreen");
+        end_attributes(stream);
         break;
       }
       else if(call_name == "function") {
-        stream << "function\"];" << std::endl;
+        set_label(stream, role, "", "", "function");
+        end_attributes(stream);
 
         id++;
         write_edge(stream, my_id, id);
-        traverse_ast(stream, "arguments", id, CAR(CDR(ast)));
+        traverse_ast(stream, "parameters", id, CAR(CDR(ast)));
 
         id++;
         write_edge(stream, my_id, id);
@@ -177,24 +214,40 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
       }
 
       std::string prefix = "argument ";
+      SEXP start_sexp = R_NilValue;
       if(call_name == ".Call") {
-        stream << "native call\", color = goldenrod2];" << std::endl;
+        set_label(stream, role, "call", "", ".Call");
+        set_color(stream, "goldenrod2");
+        end_attributes(stream);
+
+        // call name
+        id++;
+        write_edge(stream, my_id, id);
+        traverse_ast(stream, "call name", id, CADR(ast));
+
+        start_sexp = CDDR(ast);
       }
       else if(call_name != "{") {
-        stream  << "call\", color = goldenrod2];" << std::endl;
+        set_label(stream, role, "call", "", "");
+        set_color(stream, "goldenrod2");
+        end_attributes(stream);
         // call name
         id++;
         write_edge(stream, my_id, id);
         traverse_ast(stream, "call name", id, CAR(ast));
+        start_sexp = CDR(ast);
       }
       else {
-        stream << "\"];" << std::endl;
+        set_label(stream, role, "block", "", "");// should be { here for the value
+        set_color(stream, "darkred");
+        end_attributes(stream);
+        start_sexp = CDR(ast);
         prefix  = "statement ";
       }
 
       // arguments
       size_t i = 0;
-      for(SEXP cons = CDR(ast) ; cons != R_NilValue; cons = CDR(cons), i++) {
+      for(SEXP cons = start_sexp ; cons != R_NilValue; cons = CDR(cons), i++) {
         id++;
         std::string arg = prefix + std::to_string(i);
         write_edge(stream, my_id, id);
@@ -203,67 +256,82 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
     }
     break;
   case LISTSXP: {
-   stream << "parameters\"];" << std::endl;
+    set_label(stream, role, "", "pairlist", "");
+    end_attributes(stream);
     // the actual parameters
     size_t i = 0;
     for(SEXP cons = ast ; cons != R_NilValue; cons = CDR(cons), i++) {
       id++;
-      std::string arg = std::string("param_") + std::to_string(i);
+      std::string param = std::string("param_") + std::to_string(i);
       write_edge(stream, my_id, id);
-      traverse_ast(stream, arg, id, TAG(cons) );
+      traverse_ast(stream, param, id, TAG(cons) );
     }
   }
     break;
   case SYMSXP: {
-      if(role != "") {
-        stream << role << ":: ";
-      }
-      // symbols are red
-      stream << CHAR(PRINTNAME(ast)) << "\", color = red];" << std::endl;
+      set_label(stream, role, "", "symbol", CHAR(PRINTNAME(ast)));
+      set_color(stream, "red");
+      end_attributes(stream);
     }
     break;
   case NILSXP: {
       //litterals are blue
-      stream << "NULL\", color = blue];" << std::endl;
-    }
+      set_label(stream, role, "litteral", "NULL", "NULL");
+      set_color(stream, "blue");
+      end_attributes(stream);    }
     break;
   case LGLSXP: {
       auto lgl = Rf_asLogical(ast);
+      std::string value = "";
       if(lgl == NA_LOGICAL) {
-        stream << "NA";
+        value =  "NA";
       }
       else if(lgl == 0) {
-        stream << "FALSE";
+        value = "FALSE";
       }
       else {
-        stream << "TRUE";
+        value = "TRUE";
       }
-      stream << " : logical\", color = blue];" << std::endl;
+      set_label(stream, role, "litteral", "logical", value);
+      set_color(stream, "blue");
+      end_attributes(stream);
     }
     break;
   case INTSXP: {
-    stream << Rf_asInteger(ast) << " : int\", color = blue];" << std::endl;
+    set_label(stream, role, "litteral", "integer", std::to_string(Rf_asInteger(ast)));
+    set_color(stream, "blue");
+    end_attributes(stream);
     }
     break;
   case REALSXP: {
-    stream << Rf_asReal(ast) << " : real\", color = blue];" << std::endl;
+    set_label(stream, role, "litteral", "real", std::to_string(Rf_asReal(ast)));
+    set_color(stream, "blue");
+    end_attributes(stream);
     }
     break;
   case CPLXSXP: {
     auto cplx = Rf_asComplex(ast);
-    stream << cplx.r << " + " << cplx.i << " i : complex\", color = blue];" << std::endl;
+    set_label(stream, role, "litteral", "complex", std::to_string(cplx.r) + " + " + std::to_string(cplx.i) + " i");
+    set_color(stream, "blue");
+    end_attributes(stream);
     }
     break;
   case DOTSXP: {
-      stream << "...\", color = darkred];" << std::endl;
+    set_label(stream, role, "variable number of parameters", "dots", "...");
+    set_color(stream, "darkred");
+    end_attributes(stream);
     }
     break;
   case BCODESXP: {
-    stream << "bytecode\", color = darkred];" << std::endl;
+    set_label(stream, role, "", "bytecode", "");
+    set_color(stream, "darkred");
+    end_attributes(stream);
     }
     break;
   case RAWSXP: {
-      stream << (Rf_xlength(ast) > 0 ? write_escaped(std::to_string(*RAW(ast))) : "empty") << " : raw\", color = blue];" << std::endl;
+      set_label(stream, role, "litteral", "raw", Rf_xlength(ast) > 0 ? write_escaped(std::to_string(*RAW(ast))) : "empty");
+      set_color(stream, "blue");
+      end_attributes(stream);
     }
     break;
   case STRSXP: {
@@ -273,21 +341,28 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
         str.resize(30, ' ');
         str += "...";
       }
-
-      stream << str << " : str\", color = blue];" << std::endl;
+      set_label(stream, role, "litteral", "str", str);
+      set_color(stream, "blue");
+      end_attributes(stream);
     }
     break;
-    // the following ones should never happend in an AST
+    // the following ones should never happen in an AST
   case EXTPTRSXP: {
-    stream << "extptr\", color = darkred];" << std::endl;
+    set_label(stream, role, "", "extptr", "");
+    set_color(stream, "darkred");
+    end_attributes(stream);
     }
     break;
   case WEAKREFSXP: {
-    stream << "wearkref\", color = darkred];" << std::endl;
+    set_label(stream, role, "", "weakref", "");
+    set_color(stream, "darkred");
+    end_attributes(stream);
     }
     break;
   case ENVSXP: {
-    stream << "environment\", color = darkred];" << std::endl;
+    set_label(stream, role, "", "environment", "");
+    set_color(stream, "darkred");
+    end_attributes(stream);
     }
     break;
   default: {

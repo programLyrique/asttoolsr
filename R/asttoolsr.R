@@ -2,7 +2,7 @@
 #' @param ast expression, coming from a call to parse for instance
 #' @return character vector of the resulting DOT representation
 generate_dot_ast <- function(ast) {
-  stopifnot(is.expression(ast))
+  stopifnot(is.expression(ast) || is.language(ast) || is.symbol(ast))
   .Call(ASTTOOLSR_generate_dot_ast, ast)
 }
 
