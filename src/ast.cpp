@@ -74,7 +74,7 @@ inline void set_label(std::ostream& stream, const std::string& sem1, const std::
   else {
     semantics = sem2;
   }
-  stream << "label\"[" <<  semantics << "](" << type<< "){" << source << "}\" ";
+  stream << "label = \"[" <<  semantics << "](" << type<< "){" << source << "}\" ";
 }
 
 inline void set_color(std::ostream& stream, const std::string& color) {
