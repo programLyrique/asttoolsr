@@ -85,7 +85,7 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
       std::string call_name="";
       if(Rf_isSymbol(CAR(ast))) {
         call_name = CHAR(PRINTNAME(CAR(ast)));
-        Rprintf("Call: [%s]\n", call_name.c_str());
+        //Rprintf("Call: [%s]\n", call_name.c_str());
       }
 
       if(call_name == "<-" || call_name == "=") {
@@ -105,11 +105,14 @@ void traverse_ast(std::ostream& stream, const std::string& role, uint64_t& id, S
           stream << "if\", color = darkgreen];" << std::endl;
           id++;
           write_edge(stream, my_id, id);
-          traverse_ast(stream, "true branch", id, CAR(CDR(ast)));
+          traverse_ast(stream, "condition", id, CAR(CDR(ast)));
+          id++;
+          write_edge(stream, my_id, id);
+          traverse_ast(stream, "true branch", id, CAR(CDDR(ast)));
           if(CDDR(ast) != R_NilValue) {
             id++;
             write_edge(stream, my_id, id);
-            traverse_ast(stream, "false branch", id, CAR(CDDR(ast)));
+            traverse_ast(stream, "false branch", id, CAR(CDDDR(ast)));
           }
         break;
       }
